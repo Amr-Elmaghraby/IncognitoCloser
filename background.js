@@ -1,5 +1,6 @@
 
 const PASSWORD_ITERATIONS = 210000;
+const MAX_SCHEDULE_AHEAD_MS = 48 * 60 * 60 * 1000;
 
 async function closeIncognitoWindows() {
   const windows = await chrome.windows.getAll({});
@@ -72,7 +73,7 @@ async function verifyPassword(password, saltHex, expectedHash) {
   return difference === 0;
 }
 
-async function scheduleClose(minutes, password) {
+async function scheduleClose(minutes, password, scheduledForOverride) {
   if (!Number.isFinite(minutes) || minutes <= 0) {
     throw new Error("Choose a future closing time.");
   }
@@ -88,7 +89,13 @@ async function scheduleClose(minutes, password) {
   const passwordRecord = password === undefined
     ? { passwordSalt: null, passwordHash: null }
     : await createPasswordRecord(password);
-  const scheduledFor = Date.now() + minutes * 60 * 1000;
+  const scheduledFor = scheduledForOverride === undefined
+    ? Date.now() + minutes * 60 * 1000
+    : scheduledForOverride;
+  const remainingMinutes = (scheduledFor - Date.now()) / 60000;
+  if (remainingMinutes <= 0) {
+    throw new Error("Choose a future closing time.");
+  }
 
   await chrome.alarms.clear("closeIncognito");
   await chrome.storage.local.set({
@@ -98,27 +105,24 @@ async function scheduleClose(minutes, password) {
   });
 
   await chrome.alarms.create("closeIncognito", {
-    delayInMinutes: minutes
+    delayInMinutes: remainingMinutes
   });
 }
 
-async function scheduleAtTime(time, password) {
-  const match = /^([01]\d|2[0-3]):([0-5]\d)$/.exec(time);
-
-  if (!match) {
-    throw new Error("Enter a valid time in HH:MM format.");
+async function scheduleAtTime(scheduledFor, password) {
+  if (!Number.isFinite(scheduledFor)) {
+    throw new Error("Choose a valid date and time.");
   }
 
-  const now = new Date();
-  const target = new Date(now);
-
-  target.setHours(Number(match[1]), Number(match[2]), 0, 0);
-
-  if (target.getTime() <= now.getTime()) {
-    throw new Error("That time has passed today. Choose a future time.");
+  const delay = scheduledFor - Date.now();
+  if (delay <= 0) {
+    throw new Error("Choose a future date and time.");
+  }
+  if (delay > MAX_SCHEDULE_AHEAD_MS) {
+    throw new Error("Choose a date and time within the next 48 hours.");
   }
 
-  await scheduleClose((target.getTime() - now.getTime()) / 60000, password);
+  await scheduleClose(delay / 60000, password, scheduledFor);
 }
 
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
@@ -127,23 +131,23 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
       sendResponse(await closeIncognitoWindows());
     } else if (message.action === "countdown") {
       const minutes = Number(message.minutes);
-      if (!Number.isFinite(minutes) || minutes < 1) {
-        throw new Error("Enter at least 1 minute.");
+      if (!Number.isInteger(minutes) || minutes < 1) {
+        throw new Error("Enter a whole number of minutes, at least 1.");
       }
       await scheduleClose(minutes);
       sendResponse({ ok: true });
     } else if (message.action === "protectedCountdown") {
       const minutes = Number(message.minutes);
-      if (!Number.isFinite(minutes) || minutes < 1) {
-        throw new Error("Enter at least 1 minute.");
+      if (!Number.isInteger(minutes) || minutes < 1) {
+        throw new Error("Enter a whole number of minutes, at least 1.");
       }
       await scheduleClose(minutes, message.password);
       sendResponse({ ok: true });
     } else if (message.action === "specificTime") {
-      await scheduleAtTime(message.time);
+      await scheduleAtTime(message.scheduledFor);
       sendResponse({ ok: true });
     } else if (message.action === "protectedSpecificTime") {
-      await scheduleAtTime(message.time, message.password);
+      await scheduleAtTime(message.scheduledFor, message.password);
       sendResponse({ ok: true });
     } else if (message.action === "cancel") {
       const current = await chrome.storage.local.get([
