@@ -5,7 +5,24 @@ const passwordForm = document.getElementById("password-form");
 const passwordInput = document.getElementById("password-input");
 const passwordConfirmation = document.getElementById("password-confirmation");
 const passwordError = document.getElementById("password-error");
+const timeInput = document.getElementById("time");
+const MAX_SCHEDULE_AHEAD_MS = 48 * 60 * 60 * 1000;
 let resolvePasswordDialog;
+
+function toLocalDateTimeValue(timestamp) {
+  const date = new Date(timestamp - new Date(timestamp).getTimezoneOffset() * 60000);
+  return date.toISOString().slice(0, 16);
+}
+
+function updateScheduleRange() {
+  const now = Date.now();
+  timeInput.min = toLocalDateTimeValue(Math.ceil(now / 60000) * 60000);
+  timeInput.max = toLocalDateTimeValue(
+    Math.floor((now + MAX_SCHEDULE_AHEAD_MS) / 60000) * 60000
+  );
+}
+
+updateScheduleRange();
 
 function send(message) {
   return new Promise((resolve, reject) => {
@@ -90,10 +107,18 @@ passwordDialog.addEventListener("cancel", event => {
 });
 
 async function startCountdown(protectedSchedule) {
+  const hours = Number(document.getElementById("hours").value);
   const minutes = Number(document.getElementById("minutes").value);
 
-  if (!Number.isFinite(minutes) || minutes < 1) {
-    status.textContent = "Enter at least 1 minute.";
+  if (!Number.isInteger(hours) || hours < 0 ||
+      !Number.isInteger(minutes) || minutes < 0) {
+    status.textContent = "Enter whole, nonnegative hours and minutes.";
+    return;
+  }
+
+  const totalMinutes = hours * 60 + minutes;
+  if (totalMinutes < 1) {
+    status.textContent = "Enter a closing time of at least 1 minute.";
     return;
   }
 
@@ -112,22 +137,34 @@ async function startCountdown(protectedSchedule) {
 
     await send({
       action: protectedSchedule ? "protectedCountdown" : "countdown",
-      minutes,
+      minutes: totalMinutes,
       password
     });
+    const duration = `${hours} hour(s) and ${minutes} minute(s)`;
     status.textContent = protectedSchedule
-      ? `Password-protected closing scheduled in ${minutes} minute(s).`
-      : `Scheduled in ${minutes} minute(s).`;
+      ? `Password-protected closing scheduled in ${duration}.`
+      : `Scheduled in ${duration}.`;
   } catch (e) {
     status.textContent = e.message;
   }
 }
 
 async function scheduleAtTime(protectedSchedule) {
-  const time = document.getElementById("time").value;
+  updateScheduleRange();
+  const time = timeInput.value;
+  const scheduledFor = new Date(time).getTime();
+  const delay = scheduledFor - Date.now();
 
-  if (!time) {
-    status.textContent = "Choose a time first.";
+  if (!time || !Number.isFinite(scheduledFor)) {
+    status.textContent = "Choose a date and time first.";
+    return;
+  }
+  if (delay <= 0) {
+    status.textContent = "Choose a future date and time.";
+    return;
+  }
+  if (delay > MAX_SCHEDULE_AHEAD_MS) {
+    status.textContent = "Choose a date and time within the next 48 hours.";
     return;
   }
 
@@ -146,12 +183,13 @@ async function scheduleAtTime(protectedSchedule) {
 
     await send({
       action: protectedSchedule ? "protectedSpecificTime" : "specificTime",
-      time,
+      scheduledFor,
       password
     });
+    const formattedTime = new Date(scheduledFor).toLocaleString();
     status.textContent = protectedSchedule
-      ? `Password-protected closing scheduled for ${time} today.`
-      : `Scheduled for ${time} today.`;
+      ? `Password-protected closing scheduled for ${formattedTime}.`
+      : `Scheduled for ${formattedTime}.`;
   } catch (e) {
     status.textContent = e.message;
   }
