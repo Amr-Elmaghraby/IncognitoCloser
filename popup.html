@@ -1,0 +1,108 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Incognito Closer</title>
+  <style>
+    * { box-sizing: border-box; }
+    body {
+      font-family: "Segoe UI", sans-serif;
+      width: 320px;
+      padding: 14px;
+      margin: 0;
+      background: #171a1e;
+      color: #edf2f4;
+    }
+    h3 { margin: 0 0 6px; font-size: 17px; }
+    p { font-size: 12px; color: #aeb8c1; }
+    label { display: block; margin: 12px 0 5px; font-size: 12px; color: #c6d0d7; }
+    input, button {
+      width: 100%;
+      padding: 9px;
+      margin: 4px 0;
+    }
+    input {
+      border: 1px solid #414a52;
+      border-radius: 4px;
+      background: #22272d;
+      color: #edf2f4;
+      color-scheme: dark;
+    }
+    button {
+      border: 0;
+      border-radius: 4px;
+      cursor: pointer;
+      background: #24866b;
+      color: #fff;
+      font-weight: 600;
+    }
+    button:hover { filter: brightness(1.1); }
+    button:focus-visible, input:focus-visible { outline: 2px solid #76d0b2; outline-offset: 2px; }
+    button.danger { background: #a83d43; }
+    button.secondary { background: #39434b; }
+    .button-row { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+    .button-row button { min-height: 36px; padding: 8px 5px; font-size: 12px; }
+    #status { white-space: pre-wrap; min-height: 30px; margin: 12px 0 0; font-size: 12px; }
+    dialog {
+      width: 280px;
+      padding: 18px;
+      border: 1px solid #414a52;
+      border-radius: 6px;
+      background: #20252b;
+      color: #edf2f4;
+    }
+    dialog::backdrop { background: rgb(0 0 0 / 65%); }
+    dialog h2 { margin: 0 0 6px; font-size: 16px; }
+    dialog p { margin: 0 0 10px; }
+    .dialog-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 8px; }
+    .dialog-actions button { margin: 0; }
+    #password-error { min-height: 16px; margin: 4px 0; color: #ff9da2; }
+  </style>
+</head>
+<body>
+  <h3>Incognito Closer</h3>
+  <p>Only Incognito windows will be closed.</p>
+
+  <button id="close" class="danger">Close Incognito Now</button>
+
+  <label for="minutes">Close after (minutes)</label>
+  <input id="minutes" type="number" min="1" step="1" value="30">
+  <div class="button-row">
+    <button id="countdown">Start Countdown</button>
+    <button id="countdown-protected" class="secondary">With Password</button>
+  </div>
+
+  <label for="time">Close at (24-hour time)</label>
+  <input id="time" type="time" required>
+  <div class="button-row">
+    <button id="schedule">Schedule Closing</button>
+    <button id="schedule-protected" class="secondary">With Password</button>
+  </div>
+
+  <button id="cancel" class="secondary">Cancel Scheduled Closing</button>
+
+  <p id="status" role="status">Ready.</p>
+
+  <dialog id="password-dialog" aria-labelledby="password-title">
+    <form id="password-form">
+      <h2 id="password-title">Password</h2>
+      <p id="password-description"></p>
+      <label for="password-input">Password</label>
+      <input id="password-input" type="password" maxlength="1024" required>
+      <div id="confirmation-group">
+        <label for="password-confirmation">Confirm password</label>
+        <input id="password-confirmation" type="password" maxlength="1024">
+      </div>
+      <p id="password-error" role="alert"></p>
+      <div class="dialog-actions">
+        <button id="password-cancel" class="secondary" type="button">Cancel</button>
+        <button id="password-submit" type="submit">Continue</button>
+      </div>
+    </form>
+  </dialog>
+  
+  <script src="popup.js"></script>
+</body>
+</html>
