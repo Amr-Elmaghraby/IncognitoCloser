@@ -44,6 +44,8 @@
     button.secondary { background: #39434b; }
     .button-row { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
     .button-row button { min-height: 36px; padding: 8px 5px; font-size: 12px; }
+    .duration-inputs label { margin: 0; }
+    .group-label { margin: 12px 0 5px; }
     #status { white-space: pre-wrap; min-height: 30px; margin: 12px 0 0; font-size: 12px; }
     dialog {
       width: 280px;
@@ -67,18 +69,21 @@
 
   <button id="close" class="danger">Close Incognito Now</button>
 
-  <label for="minutes">Close after (minutes)</label>
-  <input id="minutes" type="number" min="1" step="1" value="30">
+  <p class="group-label">Close after</p>
+  <div class="button-row duration-inputs">
+    <label for="hours">Hours<input id="hours" type="number" min="0" step="1" value="0"></label>
+    <label for="minutes">Minutes<input id="minutes" type="number" min="0" step="1" value="30"></label>
+  </div>
   <div class="button-row">
     <button id="countdown">Start Countdown</button>
-    <button id="countdown-protected" class="secondary">With Password</button>
+    <button id="countdown-protected" class="secondary">Generating password</button>
   </div>
 
-  <label for="time">Close at (24-hour time)</label>
-  <input id="time" type="time" required>
+  <label for="time">Close at (within 48 hours)</label>
+  <input id="time" type="datetime-local" required>
   <div class="button-row">
     <button id="schedule">Schedule Closing</button>
-    <button id="schedule-protected" class="secondary">With Password</button>
+    <button id="schedule-protected" class="secondary">Generating password</button>
   </div>
 
   <button id="cancel" class="secondary">Cancel Scheduled Closing</button>
